@@ -1,0 +1,976 @@
+openapi: 3.1.0
+info:
+  title: GED — API Plateforme Documentaire
+  version: 1.0.0
+  description: |
+    API RESTful de la Plateforme Documentaire Intelligente & Sécurisée.
+    DSI — Ministère de l'Éducation Nationale du Maroc.
+
+    ## Authentification
+    L'API utilise des tokens JWT (Bearer) pour l'authentification.
+    - **Access Token** : durée courte (15 min), envoyé dans le header `Authorization: Bearer <token>`
+    - **Refresh Token** : durée longue (7 jours), utilisé pour renouveler l'access token
+    - **MFA** : authentification multi-facteurs TOTP optionnelle
+
+    ## Rôles (RBAC)
+    | Rôle | Description |
+    |------|-------------|
+    | ADMIN | Administrateur complet |
+    | CADRE | Cadre administratif |
+    | INSPECTEUR | Inspecteur pédagogique |
+    | RH | Ressources humaines |
+    | COMPTABLE | Service comptabilité |
+    | CONSULTANT | Accès lecture seule |
+  contact:
+    name: DSI — Ministère de l'Éducation Nationale
+    email: dsi@education.gov.ma
+  license:
+    name: Propriétaire
+    identifier: LicenseRef-GED-Proprietary
+
+servers:
+  - url: http://localhost:5000/api/v1
+    description: Développement local
+  - url: https://ged.education.gov.ma/api/v1
+    description: Production
+
+tags:
+  - name: Authentification
+    description: Connexion, inscription, MFA, tokens
+  - name: Utilisateurs
+    description: Gestion des comptes utilisateurs
+  - name: Documents
+    description: Upload, lecture, versioning, téléchargement
+  - name: Workflow
+    description: Circuit de validation des documents
+  - name: Audit
+    description: Journaux d'audit et traçabilité
+  - name: Notifications
+    description: Notifications utilisateur
+  - name: Système
+    description: Health check, état du système
+
+security:
+  - BearerAuth: []
+
+paths:
+  # ═══════════════════════════════════════════
+  # AUTHENTIFICATION
+  # ═══════════════════════════════════════════
+  /auth/register:
+    post:
+      tags: [Authentification]
+      summary: Créer un nouveau compte
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: agent@education.gov.ma
+                password:
+                  type: string
+                  minLength: 8
+                  example: MotDePasse$ecure1
+                firstName:
+                  type: string
+                  example: Ahmed
+                lastName:
+                  type: string
+                  example: Bennani
+      responses:
+        '201':
+          description: Compte créé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /auth/login:
+    post:
+      tags: [Authentification]
+      summary: Connexion
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Connexion réussie (ou MFA requis)
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/LoginResult'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /auth/mfa/verify:
+    post:
+      tags: [Authentification]
+      summary: Vérifier le code MFA
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userId, totpToken, pendingToken]
+              properties:
+                userId:
+                  type: string
+                  format: uuid
+                totpToken:
+                  type: string
+                  pattern: '^\d{6}$'
+                pendingToken:
+                  type: string
+      responses:
+        '200':
+          description: MFA vérifié, tokens retournés
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/TokenPair'
+
+  /auth/refresh:
+    post:
+      tags: [Authentification]
+      summary: Renouveler les tokens
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken:
+                  type: string
+      responses:
+        '200':
+          description: Tokens renouvelés
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/TokenPair'
+
+  /auth/me:
+    get:
+      tags: [Authentification]
+      summary: Profil de l'utilisateur connecté
+      responses:
+        '200':
+          description: Profil utilisateur
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/UserProfile'
+
+  /auth/logout:
+    post:
+      tags: [Authentification]
+      summary: Déconnexion
+      responses:
+        '200':
+          description: Token invalidé
+
+  /auth/password:
+    patch:
+      tags: [Authentification]
+      summary: Changer le mot de passe
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [currentPassword, newPassword]
+              properties:
+                currentPassword:
+                  type: string
+                newPassword:
+                  type: string
+                  minLength: 8
+      responses:
+        '200':
+          description: Mot de passe modifié et sessions invalidées
+
+  /auth/mfa/setup:
+    post:
+      tags: [Authentification]
+      summary: Initialiser la configuration MFA
+      responses:
+        '200':
+          description: Secret TOTP et QR code
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          secret:
+                            type: string
+                          otpauthUrl:
+                            type: string
+                          qrData:
+                            type: string
+
+  /auth/mfa/enable:
+    post:
+      tags: [Authentification]
+      summary: Activer le MFA avec un code valide
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [totpToken]
+              properties:
+                totpToken:
+                  type: string
+                  pattern: '^\d{6}$'
+      responses:
+        '200':
+          description: MFA activé
+
+  /auth/mfa:
+    delete:
+      tags: [Authentification]
+      summary: Désactiver le MFA
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [totpToken]
+              properties:
+                totpToken:
+                  type: string
+      responses:
+        '200':
+          description: MFA désactivé
+
+  # ═══════════════════════════════════════════
+  # UTILISATEURS
+  # ═══════════════════════════════════════════
+  /users:
+    get:
+      tags: [Utilisateurs]
+      summary: Lister les utilisateurs (admin)
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: role
+          in: query
+          schema:
+            $ref: '#/components/schemas/UserRole'
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/UserStatus'
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Liste paginée
+          headers:
+            X-Total-Count:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/UserProfile'
+
+    post:
+      tags: [Utilisateurs]
+      summary: Créer un utilisateur (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreateInput'
+      responses:
+        '201':
+          description: Utilisateur créé
+
+  /users/{id}:
+    get:
+      tags: [Utilisateurs]
+      summary: Détails d'un utilisateur
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Utilisateur trouvé
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags: [Utilisateurs]
+      summary: Modifier un utilisateur
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdateInput'
+      responses:
+        '200':
+          description: Utilisateur modifié
+
+    delete:
+      tags: [Utilisateurs]
+      summary: Supprimer un utilisateur (admin)
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Utilisateur supprimé
+
+  # ═══════════════════════════════════════════
+  # DOCUMENTS
+  # ═══════════════════════════════════════════
+  /documents:
+    get:
+      tags: [Documents]
+      summary: Lister les documents accessibles
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: category
+          in: query
+          schema:
+            $ref: '#/components/schemas/DocumentCategory'
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/DocumentStatus'
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Liste paginée de documents
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Document'
+
+    post:
+      tags: [Documents]
+      summary: Uploader un document
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, title, category]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                title:
+                  type: string
+                category:
+                  $ref: '#/components/schemas/DocumentCategory'
+                confidentiality:
+                  $ref: '#/components/schemas/ConfidentialityLevel'
+                tags:
+                  type: string
+                  description: Comma-separated tags
+                description:
+                  type: string
+      responses:
+        '201':
+          description: Document uploadé
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /documents/{id}:
+    get:
+      tags: [Documents]
+      summary: Détails d'un document
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Document trouvé
+
+    patch:
+      tags: [Documents]
+      summary: Modifier les métadonnées
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentUpdateInput'
+      responses:
+        '200':
+          description: Document modifié
+
+    delete:
+      tags: [Documents]
+      summary: Supprimer un document
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Document supprimé
+
+  /documents/{id}/versions:
+    get:
+      tags: [Documents]
+      summary: Lister les versions d'un document
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Liste des versions
+
+  /documents/{id}/download-url:
+    get:
+      tags: [Documents]
+      summary: Obtenir une URL de téléchargement signée
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: URL signée (validité 1h)
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          url:
+                            type: string
+                            format: uri
+                          expiresIn:
+                            type: integer
+
+  # ═══════════════════════════════════════════
+  # WORKFLOW
+  # ═══════════════════════════════════════════
+  /workflow:
+    get:
+      tags: [Workflow]
+      summary: Lister les workflows
+      responses:
+        '200':
+          description: Liste des workflows
+
+  /workflow/submit:
+    post:
+      tags: [Workflow]
+      summary: Soumettre un document pour validation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [documentId]
+              properties:
+                documentId:
+                  type: string
+                  format: uuid
+                comment:
+                  type: string
+      responses:
+        '201':
+          description: Workflow créé
+
+  /workflow/{id}/approve:
+    post:
+      tags: [Workflow]
+      summary: Approuver un workflow
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                comment:
+                  type: string
+      responses:
+        '200':
+          description: Workflow approuvé
+
+  /workflow/{id}/reject:
+    post:
+      tags: [Workflow]
+      summary: Rejeter un workflow
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [comment]
+              properties:
+                comment:
+                  type: string
+      responses:
+        '200':
+          description: Workflow rejeté
+
+  # ═══════════════════════════════════════════
+  # AUDIT
+  # ═══════════════════════════════════════════
+  /audit:
+    get:
+      tags: [Audit]
+      summary: Consulter les logs d'audit (admin)
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: action
+          in: query
+          schema:
+            type: string
+        - name: userId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Logs d'audit paginés
+
+  /audit/summary:
+    get:
+      tags: [Audit]
+      summary: Résumé statistique des audits (admin)
+      parameters:
+        - name: from
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Résumé
+
+  # ═══════════════════════════════════════════
+  # NOTIFICATIONS
+  # ═══════════════════════════════════════════
+  /notifications:
+    get:
+      tags: [Notifications]
+      summary: Mes notifications
+      responses:
+        '200':
+          description: Liste des notifications
+
+  /notifications/{id}/read:
+    patch:
+      tags: [Notifications]
+      summary: Marquer une notification comme lue
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Notification lue
+
+  /notifications/read-all:
+    patch:
+      tags: [Notifications]
+      summary: Marquer toutes les notifications comme lues
+      responses:
+        '200':
+          description: OK
+
+  /notifications/unread-count:
+    get:
+      tags: [Notifications]
+      summary: Nombre de notifications non lues
+      responses:
+        '200':
+          description: Compteur
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          count:
+                            type: integer
+
+  # ═══════════════════════════════════════════
+  # SYSTÈME
+  # ═══════════════════════════════════════════
+  /health:
+    get:
+      tags: [Système]
+      summary: Health check
+      security: []
+      responses:
+        '200':
+          description: Service opérationnel
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  service:
+                    type: string
+                  version:
+                    type: string
+                  environment:
+                    type: string
+
+# ═══════════════════════════════════════════
+# COMPONENTS
+# ═══════════════════════════════════════════
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    IdParam:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    PageParam:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    LimitParam:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+
+  schemas:
+    ApiResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        data:
+          type: object
+          nullable: true
+
+    TokenPair:
+      type: object
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        accessExpiresIn:
+          type: string
+          example: 15m
+        refreshExpiresIn:
+          type: string
+          example: 7d
+
+    LoginResult:
+      type: object
+      properties:
+        requiresMFA:
+          type: boolean
+        userId:
+          type: string
+          format: uuid
+        pendingToken:
+          type: string
+          nullable: true
+        tokens:
+          $ref: '#/components/schemas/TokenPair'
+
+    UserRole:
+      type: string
+      enum: [ADMIN, CADRE, INSPECTEUR, RH, COMPTABLE, CONSULTANT]
+
+    UserStatus:
+      type: string
+      enum: [ACTIVE, INACTIVE, SUSPENDED]
+
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        role:
+          $ref: '#/components/schemas/UserRole'
+        status:
+          $ref: '#/components/schemas/UserStatus'
+        firstName:
+          type: string
+          nullable: true
+        lastName:
+          type: string
+          nullable: true
+        mfaEnabled:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    UserCreateInput:
+      type: object
+      required: [email, password, role]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+        role:
+          $ref: '#/components/schemas/UserRole'
+        firstName:
+          type: string
+        lastName:
+          type: string
+
+    UserUpdateInput:
+      type: object
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        role:
+          $ref: '#/components/schemas/UserRole'
+        status:
+          $ref: '#/components/schemas/UserStatus'
+
+    DocumentCategory:
+      type: string
+      enum:
+        - NOTE_SERVICE
+        - RAPPORT_INSPECTION
+        - DECISION
+        - CIRCULAIRE
+        - CORRESPONDANCE
+        - PROCES_VERBAL
+        - BUDGET
+        - FACTURE
+        - BON_COMMANDE
+        - ATTESTATION
+        - AUTRE
+
+    ConfidentialityLevel:
+      type: string
+      enum: [PUBLIC, INTERNE, CONFIDENTIEL, SECRET]
+
+    DocumentStatus:
+      type: string
+      enum: [BROUILLON, EN_ATTENTE, APPROUVE, REJETE, ARCHIVE]
+
+    Document:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        category:
+          $ref: '#/components/schemas/DocumentCategory'
+        confidentiality:
+          $ref: '#/components/schemas/ConfidentialityLevel'
+        status:
+          $ref: '#/components/schemas/DocumentStatus'
+        fileName:
+          type: string
+        fileSize:
+          type: integer
+        mimeType:
+          type: string
+        storageKey:
+          type: string
+        version:
+          type: integer
+        tags:
+          type: array
+          items:
+            type: string
+        uploadedBy:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    DocumentUpdateInput:
+      type: object
+      properties:
+        title:
+          type: string
+        category:
+          $ref: '#/components/schemas/DocumentCategory'
+        confidentiality:
+          $ref: '#/components/schemas/ConfidentialityLevel'
+        tags:
+          type: array
+          items:
+            type: string
+        description:
+          type: string
+
+  responses:
+    BadRequest:
+      description: Requête invalide
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiResponse'
+    Unauthorized:
+      description: Non authentifié
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiResponse'
+    Forbidden:
+      description: Accès refusé
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiResponse'
+    NotFound:
+      description: Ressource introuvable
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiResponse'
+    Conflict:
+      description: Conflit (ressource existante)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiResponse'
+    TooManyRequests:
+      description: Trop de requêtes
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiResponse'

@@ -1,0 +1,311 @@
+
+ged-plateforme/
+│
+├── 📄 README.md
+├── 📄 .env.example
+├── 📄 .gitignore
+├── 📄 docker-compose.yml
+├── 📄 docker-compose.prod.yml
+│
+├── 📁 frontend/                          # React.js + TypeScript + Tailwind CSS
+│   ├── 📄 package.json
+│   ├── 📄 tsconfig.json
+│   ├── 📄 tailwind.config.ts
+│   ├── 📄 vite.config.ts
+│   ├── 📄 Dockerfile
+│   │
+│   ├── 📁 public/
+│   │   └── 📄 index.html
+│   │
+│   └── 📁 src/
+│       ├── 📄 main.tsx
+│       ├── 📄 App.tsx
+│       │
+│       ├── 📁 assets/
+│       │   ├── 📁 images/
+│       │   │   └── 🖼️ logo-ministere.png
+│       │   └── 📁 icons/
+│       │
+│       ├── 📁 components/                # Composants réutilisables
+│       │   ├── 📁 common/
+│       │   │   ├── 📄 Button.tsx
+│       │   │   ├── 📄 Modal.tsx
+│       │   │   ├── 📄 Table.tsx
+│       │   │   ├── 📄 Badge.tsx
+│       │   │   ├── 📄 SearchBar.tsx
+│       │   │   ├── 📄 Pagination.tsx
+│       │   │   ├── 📄 FileDropzone.tsx
+│       │   │   ├── 📄 Spinner.tsx
+│       │   │   └── 📄 Alert.tsx
+│       │   │
+│       │   ├── 📁 layout/
+│       │   │   ├── 📄 Sidebar.tsx
+│       │   │   ├── 📄 Header.tsx
+│       │   │   ├── 📄 Footer.tsx
+│       │   │   └── 📄 MainLayout.tsx
+│       │   │
+│       │   ├── 📁 auth/
+│       │   │   ├── 📄 LoginForm.tsx
+│       │   │   ├── 📄 MFAForm.tsx
+│       │   │   └── 📄 ProtectedRoute.tsx
+│       │   │
+│       │   ├── 📁 documents/
+│       │   │   ├── 📄 DocumentCard.tsx
+│       │   │   ├── 📄 DocumentTable.tsx
+│       │   │   ├── 📄 DocumentViewer.tsx
+│       │   │   ├── 📄 UploadForm.tsx
+│       │   │   ├── 📄 VersionHistory.tsx
+│       │   │   └── 📄 TagInput.tsx
+│       │   │
+│       │   ├── 📁 workflow/
+│       │   │   ├── 📄 WorkflowBoard.tsx
+│       │   │   ├── 📄 ValidationCard.tsx
+│       │   │   └── 📄 ApprovalTimeline.tsx
+│       │   │
+│       │   ├── 📁 ai/
+│       │   │   ├── 📄 AIToolsPanel.tsx
+│       │   │   ├── 📄 SummaryCard.tsx
+│       │   │   ├── 📄 OCRViewer.tsx
+│       │   │   └── 📄 SemanticSearch.tsx
+│       │   │
+│       │   ├── 📁 audit/
+│       │   │   ├── 📄 AuditLogTable.tsx
+│       │   │   └── 📄 AuditFilters.tsx
+│       │   │
+│       │   └── 📁 reports/
+│       │       ├── 📄 ReportsDashboard.tsx
+│       │       ├── 📄 PieChart.tsx
+│       │       └── 📄 BarChart.tsx
+│       │
+│       ├── 📁 pages/                     # Pages principales
+│       │   ├── 📄 LoginPage.tsx
+│       │   ├── 📄 MFAPage.tsx
+│       │   ├── 📄 DashboardPage.tsx
+│       │   ├── 📄 DocumentsPage.tsx
+│       │   ├── 📄 UploadPage.tsx
+│       │   ├── 📄 DocumentViewerPage.tsx
+│       │   ├── 📄 WorkflowPage.tsx
+│       │   ├── 📄 AIToolsPage.tsx
+│       │   ├── 📄 AuditLogsPage.tsx
+│       │   ├── 📄 ReportsPage.tsx
+│       │   ├── 📄 SettingsPage.tsx
+│       │   ├── 📄 UserManagementPage.tsx
+│       │   └── 📄 NotFoundPage.tsx
+│       │
+│       ├── 📁 hooks/                     # Custom React Hooks
+│       │   ├── 📄 useAuth.ts
+│       │   ├── 📄 useDocuments.ts
+│       │   ├── 📄 useAI.ts
+│       │   ├── 📄 useAudit.ts
+│       │   └── 📄 usePermissions.ts
+│       │
+│       ├── 📁 store/                     # State Management (Zustand / Redux)
+│       │   ├── 📄 authStore.ts
+│       │   ├── 📄 documentStore.ts
+│       │   ├── 📄 notificationStore.ts
+│       │   └── 📄 uiStore.ts
+│       │
+│       ├── 📁 services/                  # Appels API
+│       │   ├── 📄 api.ts                 # Axios instance + interceptors
+│       │   ├── 📄 authService.ts
+│       │   ├── 📄 documentService.ts
+│       │   ├── 📄 workflowService.ts
+│       │   ├── 📄 aiService.ts
+│       │   ├── 📄 auditService.ts
+│       │   └── 📄 reportService.ts
+│       │
+│       ├── 📁 types/                     # TypeScript interfaces & types
+│       │   ├── 📄 auth.types.ts
+│       │   ├── 📄 document.types.ts
+│       │   ├── 📄 user.types.ts
+│       │   ├── 📄 workflow.types.ts
+│       │   └── 📄 audit.types.ts
+│       │
+│       ├── 📁 utils/
+│       │   ├── 📄 formatters.ts
+│       │   ├── 📄 validators.ts
+│       │   ├── 📄 constants.ts
+│       │   └── 📄 helpers.ts
+│       │
+│       └── 📁 router/
+│           └── 📄 AppRouter.tsx
+│
+│
+├── 📁 backend/                           # Node.js (Express) — API principale
+│   ├── 📄 package.json
+│   ├── 📄 tsconfig.json
+│   ├── 📄 Dockerfile
+│   │
+│   └── 📁 src/
+│       ├── 📄 app.ts                     # Express app config
+│       ├── 📄 server.ts                  # Point d'entrée
+│       │
+│       ├── 📁 config/
+│       │   ├── 📄 database.ts
+│       │   ├── 📄 redis.ts
+│       │   ├── 📄 storage.ts             # Config S3 / MinIO
+│       │   ├── 📄 jwt.ts
+│       │   └── 📄 env.ts
+│       │
+│       ├── 📁 modules/
+│       │   │
+│       │   ├── 📁 auth/
+│       │   │   ├── 📄 auth.controller.ts
+│       │   │   ├── 📄 auth.service.ts
+│       │   │   ├── 📄 auth.routes.ts
+│       │   │   ├── 📄 mfa.service.ts
+│       │   │   └── 📄 auth.validation.ts
+│       │   │
+│       │   ├── 📁 users/
+│       │   │   ├── 📄 user.controller.ts
+│       │   │   ├── 📄 user.service.ts
+│       │   │   ├── 📄 user.routes.ts
+│       │   │   ├── 📄 user.model.ts
+│       │   │   └── 📄 user.validation.ts
+│       │   │
+│       │   ├── 📁 documents/
+│       │   │   ├── 📄 document.controller.ts
+│       │   │   ├── 📄 document.service.ts
+│       │   │   ├── 📄 document.routes.ts
+│       │   │   ├── 📄 document.model.ts
+│       │   │   ├── 📄 version.service.ts
+│       │   │   └── 📄 document.validation.ts
+│       │   │
+│       │   ├── 📁 workflow/
+│       │   │   ├── 📄 workflow.controller.ts
+│       │   │   ├── 📄 workflow.service.ts
+│       │   │   ├── 📄 workflow.routes.ts
+│       │   │   └── 📄 workflow.model.ts
+│       │   │
+│       │   ├── 📁 audit/
+│       │   │   ├── 📄 audit.controller.ts
+│       │   │   ├── 📄 audit.service.ts
+│       │   │   ├── 📄 audit.routes.ts
+│       │   │   └── 📄 audit.model.ts
+│       │   │
+│       │   ├── 📁 permissions/
+│       │   │   ├── 📄 permission.service.ts
+│       │   │   ├── 📄 rbac.middleware.ts
+│       │   │   └── 📄 roles.config.ts
+│       │   │
+│       │   └── 📁 notifications/
+│       │       ├── 📄 notification.service.ts
+│       │       └── 📄 email.service.ts
+│       │
+│       ├── 📁 middlewares/
+│       │   ├── 📄 authenticate.ts        # Vérification JWT
+│       │   ├── 📄 authorize.ts           # RBAC
+│       │   ├── 📄 rateLimiter.ts
+│       │   ├── 📄 errorHandler.ts
+│       │   ├── 📄 auditLogger.ts
+│       │   ├── 📄 uploadMiddleware.ts    # Multer
+│       │   └── 📄 sanitize.ts
+│       │
+│       ├── 📁 shared/
+│       │   ├── 📄 ApiResponse.ts
+│       │   ├── 📄 AppError.ts
+│       │   └── 📄 enums.ts
+│       │
+│       └── 📁 utils/
+│           ├── 📄 encryption.ts          # AES-256
+│           ├── 📄 fileUtils.ts
+│           ├── 📄 tokenUtils.ts
+│           └── 📄 logger.ts
+│
+│
+├── 📁 ai-service/                        # FastAPI — Microservice IA (Python)
+│   ├── 📄 requirements.txt
+│   ├── 📄 Dockerfile
+│   ├── 📄 main.py                        # FastAPI app entry point
+│   │
+│   ├── 📁 api/
+│   │   ├── 📄 routes.py
+│   │   ├── 📁 endpoints/
+│   │   │   ├── 📄 classification.py
+│   │   │   ├── 📄 extraction.py
+│   │   │   ├── 📄 summarization.py
+│   │   │   ├── 📄 ocr.py
+│   │   │   ├── 📄 search.py
+│   │   │   └── 📄 anomaly.py
+│   │
+│   ├── 📁 core/
+│   │   ├── 📄 config.py
+│   │   ├── 📄 security.py
+│   │   └── 📄 dependencies.py
+│   │
+│   ├── 📁 models/                        # Modèles IA chargés
+│   │   ├── 📄 classifier.py              # Classification automatique
+│   │   ├── 📄 ner_extractor.py           # Extraction d'entités (spaCy)
+│   │   ├── 📄 summarizer.py              # Résumé automatique (Transformers)
+│   │   ├── 📄 semantic_search.py         # Recherche sémantique (embeddings)
+│   │   ├── 📄 ocr_engine.py              # OCR (Tesseract / PaddleOCR)
+│   │   └── 📄 anomaly_detector.py        # Détection d'anomalies (ML)
+│   │
+│   ├── 📁 schemas/
+│   │   ├── 📄 document_schema.py
+│   │   └── 📄 ai_response_schema.py
+│   │
+│   ├── 📁 services/
+│   │   ├── 📄 ai_pipeline.py
+│   │   └── 📄 model_loader.py
+│   │
+│   └── 📁 utils/
+│       ├── 📄 text_preprocessor.py
+│       ├── 📄 pdf_reader.py
+│       └── 📄 language_detector.py
+│
+│
+├── 📁 database/                          # PostgreSQL — Scripts & Migrations
+│   ├── 📁 migrations/
+│   │   ├── 📄 001_create_users.sql
+│   │   ├── 📄 002_create_documents.sql
+│   │   ├── 📄 003_create_versions.sql
+│   │   ├── 📄 004_create_workflow.sql
+│   │   ├── 📄 005_create_audit_logs.sql
+│   │   ├── 📄 006_create_permissions.sql
+│   │   └── 📄 007_create_notifications.sql
+│   │
+│   ├── 📁 seeds/
+│   │   ├── 📄 seed_roles.sql
+│   │   ├── 📄 seed_admin.sql
+│   │   └── 📄 seed_categories.sql
+│   │
+│   └── 📄 schema.sql                     # Schéma complet de la BDD
+│
+│
+├── 📁 storage/                           # Gestion fichiers (MinIO / S3)
+│   └── 📄 storage.config.ts
+│
+│
+├── 📁 security/                          # Configurations sécurité
+│   ├── 📄 ssl/                           # Certificats SSL/TLS
+│   ├── 📄 cors.config.ts
+│   ├── 📄 csp.config.ts                  # Content Security Policy
+│   └── 📄 audit-policy.md
+│
+│
+├── 📁 docs/                              # Documentation technique
+│   ├── 📄 architecture.md
+│   ├── 📄 api-spec.yaml                  # OpenAPI / Swagger
+│   ├── 📄 data-model.md
+│   ├── 📁 uml/
+│   │   ├── 📄 use-case.puml
+│   │   ├── 📄 sequence-auth.puml
+│   │   ├── 📄 sequence-upload.puml
+│   │   ├── 📄 class-diagram.puml
+│   │   └── 📄 deployment.puml
+│   └── 📁 guides/
+│       ├── 📄 installation.md
+│       └── 📄 deployment.md
+│
+│
+└── 📁 infrastructure/                    # DevOps & Déploiement
+    ├── 📄 nginx.conf
+    ├── 📁 kubernetes/
+    │   ├── 📄 frontend-deployment.yaml
+    │   ├── 📄 backend-deployment.yaml
+    │   ├── 📄 ai-service-deployment.yaml
+    │   └── 📄 postgres-statefulset.yaml
+    └── 📁 scripts/
+        ├── 📄 backup.sh
+        └── 📄 deploy.sh
