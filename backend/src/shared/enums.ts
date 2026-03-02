@@ -20,17 +20,15 @@ export enum HttpStatus {
 
 // ─────────────────────────────────────────────
 // Rôles utilisateurs (RBAC)
+// Alignés strictement sur les rôles ministériels
 // ─────────────────────────────────────────────
 export enum UserRole {
-  ADMIN = 'ADMIN',                   // Administrateur système (accès total)
-  CADRE = 'CADRE',                   // Cadre ministériel
-  INSPECTEUR = 'INSPECTEUR',         // Inspecteur pédagogique
-  RH = 'RH',                        // Ressources humaines
-  COMPTABLE = 'COMPTABLE',           // Service financier
-  CONSULTANT = 'CONSULTANT',         // Accès lecture seule
-  DOCUMENT_MANAGER = 'DOCUMENT_MANAGER', // Gestionnaire documentaire
-  STANDARD_USER = 'STANDARD_USER',   // Utilisateur standard
-  SECURITY_OFFICER = 'SECURITY_OFFICER', // RSSI / Responsable sécurité
+  ADMIN = 'ADMIN',           // Administrateur système (accès total)
+  CADRE = 'CADRE',           // Cadre ministériel
+  INSPECTEUR = 'INSPECTEUR', // Inspecteur pédagogique
+  RH = 'RH',                 // Ressources humaines
+  COMPTABLE = 'COMPTABLE',   // Service financier
+  CONSULTANT = 'CONSULTANT', // Accès lecture seule
 }
 
 // ─────────────────────────────────────────────
