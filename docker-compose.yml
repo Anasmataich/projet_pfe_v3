@@ -167,6 +167,10 @@ services:
         condition: service_healthy
       minio:
         condition: service_started
+      ai-service:
+        condition: service_healthy
+      mailhog:
+        condition: service_started
     networks:
       - ged-network
 
@@ -196,11 +200,11 @@ services:
     volumes:
       - ai_model_cache:/app/model_cache
     healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:8000/health || exit 1"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\" || exit 1"]
       interval: 20s
       timeout: 10s
       retries: 5
-      start_period: 60s
+      start_period: 90s
     depends_on:
       minio:
         condition: service_started

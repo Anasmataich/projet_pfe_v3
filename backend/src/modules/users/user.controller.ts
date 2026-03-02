@@ -80,28 +80,42 @@ export const remove = async (req: Request, res: Response): Promise<void> => {
   ApiResponse.noContent(res);
 };
 
+// #region agent log
+const DEBUG_LOG_USER = (data: Record<string, unknown>) => {
+  fetch('http://127.0.0.1:7538/ingest/8d912442-da40-47b9-974f-aab27a9fe5a2', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '8bac40' }, body: JSON.stringify({ sessionId: '8bac40', location: 'user.controller.ts createAdminUser', message: 'admin-create-user', data, timestamp: Date.now() }) }).catch(() => {});
+};
+// #endregion
+
 /**
  * Création d'un utilisateur via l'API d'administration :
  * - Mot de passe robuste (réutilise la validation d'inscription)
  * - Email normalisé / validé
- * - Rôle limité à DOCUMENT_MANAGER, STANDARD_USER, SECURITY_OFFICER
+ * - Rôle limité à CADRE, INSPECTEUR, RH, COMPTABLE, CONSULTANT
  */
 export const createAdminUser = async (req: Request, res: Response): Promise<void> => {
-  const body = req.body as { role?: string };
+  const body = req.body as { role?: string; email?: string; password?: string; firstName?: string; lastName?: string };
+
+  DEBUG_LOG_USER({ hypothesisId: 'H3', bodyKeys: Object.keys(body ?? {}), role: body?.role });
 
   if (!body.role) {
+    DEBUG_LOG_USER({ hypothesisId: 'H4', branch: 'missing_role' });
     ApiResponse.error(res, 'role requis', HttpStatus.BAD_REQUEST);
     return;
   }
 
   const allowedRoles: UserRole[] = [
-    UserRole.DOCUMENT_MANAGER,
-    UserRole.STANDARD_USER,
-    UserRole.SECURITY_OFFICER,
+    UserRole.CADRE,
+    UserRole.INSPECTEUR,
+    UserRole.RH,
+    UserRole.COMPTABLE,
+    UserRole.CONSULTANT,
   ];
+
+  DEBUG_LOG_USER({ hypothesisId: 'H3', allowedRoles, roleValue: body.role, includes: allowedRoles.includes(body.role as UserRole) });
 
   const role = body.role as UserRole;
   if (!allowedRoles.includes(role)) {
+    DEBUG_LOG_USER({ hypothesisId: 'H3', branch: 'role_not_allowed' });
     ApiResponse.error(
       res,
       'Rôle non autorisé pour la création via /admin/users',
@@ -110,6 +124,7 @@ export const createAdminUser = async (req: Request, res: Response): Promise<void
     return;
   }
 
+  DEBUG_LOG_USER({ hypothesisId: 'H4', branch: 'before_validateRegisterInput' });
   // Valide email + mot de passe robuste + normalisation des champs
   const { email, password, firstName, lastName } = validateRegisterInput(req.body);
 

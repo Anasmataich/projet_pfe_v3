@@ -6,7 +6,8 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/server.js",
-    "dev": "ts-node-dev --respawn src/server.ts"
+    "dev": "ts-node-dev --respawn src/server.ts",
+    "audit:connectivity": "ts-node src/scripts/audit-connectivity.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.490.0",

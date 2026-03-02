@@ -7,17 +7,14 @@ import * as authController from './auth.controller';
 
 const router = Router();
 
-// Routes publiques (rate-limitées)
-router.use(authRateLimiter);
+// Rate limiter strict uniquement sur les tentatives de connexion (évite de bloquer /me, /refresh, /logout)
+router.post('/register', authRateLimiter, authController.register);
+router.post('/login', authRateLimiter, authController.login);
+router.post('/mfa/verify', authRateLimiter, authController.verifyMFA);
+router.post('/forgot-password', authRateLimiter, authController.forgotPassword);
+router.post('/reset-password', authRateLimiter, authController.resetPassword);
 
-router.post('/register', authController.register);
-router.post('/login', authController.login);
-router.post('/mfa/verify', authController.verifyMFA);
 router.post('/refresh', authController.refresh);
-router.post('/forgot-password', authController.forgotPassword);
-router.post('/reset-password', authController.resetPassword);
-
-// Routes authentifiées
 router.get('/me', authenticate, authController.getMe);
 router.post('/logout', authenticate, authController.logout);
 router.patch('/password', authenticate, authController.changePassword);

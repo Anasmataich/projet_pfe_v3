@@ -182,11 +182,11 @@ class EmailService {
 
     const smtpHost = process.env['SMTP_HOST'];
     const smtpPort = parseInt(process.env['SMTP_PORT'] ?? '587', 10);
-    const smtpUser = process.env['SMTP_USER'];
-    const smtpPass = process.env['SMTP_PASS'];
+    const smtpUser = process.env['SMTP_USER'] || undefined;
+    const smtpPass = process.env['SMTP_PASSWORD'] || process.env['SMTP_PASS'] || undefined;
 
-    if (!smtpHost || !smtpUser || !smtpPass) {
-      logger.warn('[Email] SMTP non configuré — les emails seront loggués uniquement');
+    if (!smtpHost) {
+      logger.warn('[Email] SMTP non configuré (SMTP_HOST manquant) — les emails seront loggués uniquement');
       this.initialized = true;
       return false;
     }
@@ -196,7 +196,7 @@ class EmailService {
         host: smtpHost,
         port: smtpPort,
         secure: smtpPort === 465,
-        auth: { user: smtpUser, pass: smtpPass },
+        auth: smtpUser && smtpPass ? { user: smtpUser, pass: smtpPass } : undefined,
         tls: { rejectUnauthorized: process.env['NODE_ENV'] === 'production' },
       });
 
