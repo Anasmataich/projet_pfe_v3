@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Users, Plus, Edit, Trash2 } from 'lucide-react';
 import { Table, type Column } from '@/components/common/Table';
 import { Badge } from '@/components/common/Badge';
@@ -13,11 +13,15 @@ import type { User, UserFilters } from '@/types/user.types';
 import type { UserRole, UserStatus } from '@/types/auth.types';
 import toast from 'react-hot-toast';
 
+// ✅ roles source-of-truth (keys from ROLE_LABELS)
+const ROLE_OPTIONS = Object.keys(ROLE_LABELS) as UserRole[];
+
 export function UserManagementPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [total, setTotal] = useState(0);
   const [filters, setFilters] = useState<UserFilters>({ page: 1, limit: 20 });
   const [isLoading, setIsLoading] = useState(true);
+
   const [createOpen, setCreateOpen] = useState(false);
   const [editUser, setEditUser] = useState<User | null>(null);
   const [deleteUser, setDeleteUser] = useState<User | null>(null);
@@ -28,6 +32,8 @@ export function UserManagementPage() {
       const res = await reportService.getUsers(filters);
       setUsers(res.data);
       setTotal(res.total);
+    } catch {
+      toast.error("Erreur lors du chargement des utilisateurs");
     } finally {
       setIsLoading(false);
     }
@@ -35,14 +41,16 @@ export function UserManagementPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  const columns: Column<User>[] = [
+  const columns: Column<User>[] = useMemo(() => ([
     {
       key: 'user',
       header: 'Utilisateur',
       render: (u) => (
         <div>
           <p className="text-sm font-medium text-white">
-            {u.firstName || u.lastName ? `${u.firstName ?? ''} ${u.lastName ?? ''}`.trim() : u.email.split('@')[0]}
+            {u.firstName || u.lastName
+              ? `${u.firstName ?? ''} ${u.lastName ?? ''}`.trim()
+              : u.email.split('@')[0]}
           </p>
           <p className="text-xs text-slate-500">{u.email}</p>
         </div>
@@ -51,13 +59,27 @@ export function UserManagementPage() {
     {
       key: 'role',
       header: 'Rôle',
-      render: (u) => <Badge variant="info">{ROLE_LABELS[u.role]}</Badge>,
+      render: (u) => (
+        <Badge variant="info">
+          {ROLE_LABELS[u.role as UserRole] ?? u.role}
+        </Badge>
+      ),
     },
     {
       key: 'status',
       header: 'Statut',
       render: (u) => (
-        <Badge variant={u.status === 'ACTIVE' ? 'success' : u.status === 'SUSPENDED' ? 'danger' : 'warning'}>
+        <Badge
+          variant={
+            u.status === 'ACTIVE'
+              ? 'success'
+              : u.status === 'SUSPENDED'
+              ? 'danger'
+              : u.status === 'PENDING'
+              ? 'warning'
+              : 'default'
+          }
+        >
           {u.status}
         </Badge>
       ),
@@ -65,12 +87,18 @@ export function UserManagementPage() {
     {
       key: 'mfa',
       header: 'MFA',
-      render: (u) => <Badge variant={u.mfaEnabled ? 'success' : 'default'}>{u.mfaEnabled ? 'Activé' : 'Désactivé'}</Badge>,
+      render: (u) => (
+        <Badge variant={u.mfaEnabled ? 'success' : 'default'}>
+          {u.mfaEnabled ? 'Activé' : 'Désactivé'}
+        </Badge>
+      ),
     },
     {
       key: 'created',
       header: 'Inscription',
-      render: (u) => <span className="text-xs text-slate-500">{formatDate(u.createdAt)}</span>,
+      render: (u) => (
+        <span className="text-xs text-slate-500">{formatDate(u.createdAt)}</span>
+      ),
     },
     {
       key: 'actions',
@@ -81,21 +109,23 @@ export function UserManagementPage() {
           <button
             onClick={(e) => { e.stopPropagation(); setEditUser(u); }}
             className="rounded-lg p-1.5 text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 transition-colors"
+            title="Modifier"
           >
             <Edit className="h-4 w-4" />
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); setDeleteUser(u); }}
             className="rounded-lg p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+            title="Supprimer"
           >
             <Trash2 className="h-4 w-4" />
           </button>
         </div>
       ),
     },
-  ];
+  ]), []);
 
-  const handleCreate = async (data: { email: string; password: string; role: string; firstName?: string; lastName?: string }) => {
+  const handleCreate = async (data: { email: string; password: string; role: UserRole; firstName?: string; lastName?: string }) => {
     try {
       await reportService.createUser(data);
       toast.success('Utilisateur créé');
@@ -134,14 +164,17 @@ export function UserManagementPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="page-title flex items-center gap-2.5">
-            <div className="h-9 w-9 rounded-xl flex items-center justify-center shrink-0"
-                 style={{ background: 'rgba(139,92,246,0.15)' }}>
+            <div
+              className="h-9 w-9 rounded-xl flex items-center justify-center shrink-0"
+              style={{ background: 'rgba(139,92,246,0.15)' }}
+            >
               <Users className="h-4.5 w-4.5 text-violet-400" />
             </div>
             Gestion des utilisateurs
           </h1>
           <p className="page-sub mt-1">{total} utilisateur(s)</p>
         </div>
+
         <button onClick={() => setCreateOpen(true)} className="btn-primary self-start">
           <Plus className="h-4 w-4" /> Nouvel utilisateur
         </button>
@@ -149,47 +182,101 @@ export function UserManagementPage() {
 
       <div className="card p-4 flex gap-3 items-end flex-wrap">
         <div className="flex-1 min-w-[200px]">
-          <SearchBar placeholder="Rechercher…" onSearch={(s) => setFilters({ ...filters, search: s, page: 1 })} />
+          <SearchBar
+            placeholder="Rechercher…"
+            onSearch={(s) => setFilters((prev) => ({ ...prev, search: s, page: 1 }))}
+          />
         </div>
-        <select className="select w-44" value={filters.role ?? ''} onChange={(e) => setFilters({ ...filters, role: (e.target.value as UserRole) || undefined, page: 1 })}>
+
+        <select
+          className="select w-44"
+          value={(filters.role as string) ?? ''}
+          onChange={(e) =>
+            setFilters((prev) => ({
+              ...prev,
+              role: (e.target.value as UserRole) || undefined,
+              page: 1,
+            }))
+          }
+        >
           <option value="">Tous les rôles</option>
-          {Object.entries(ROLE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+          {ROLE_OPTIONS.map((r) => (
+            <option key={r} value={r}>
+              {ROLE_LABELS[r]}
+            </option>
+          ))}
         </select>
       </div>
 
-      <Table columns={columns} data={users} isLoading={isLoading} rowKey={(u) => u.id} emptyMessage="Aucun utilisateur" />
+      <Table
+        columns={columns}
+        data={users}
+        isLoading={isLoading}
+        rowKey={(u) => u.id}
+        emptyMessage="Aucun utilisateur"
+      />
 
       <div className="flex justify-center">
-        <Pagination page={filters.page ?? 1} total={total} limit={filters.limit ?? 20} onPageChange={(p) => setFilters({ ...filters, page: p })} />
+        <Pagination
+          page={filters.page ?? 1}
+          total={total}
+          limit={filters.limit ?? 20}
+          onPageChange={(p) => setFilters((prev) => ({ ...prev, page: p }))}
+        />
       </div>
 
       {/* Create modal */}
-      <UserFormModal open={createOpen} onClose={() => setCreateOpen(false)} onSubmit={handleCreate} title="Nouvel utilisateur" />
+      <UserFormModal
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onSubmit={handleCreate}
+        title="Nouvel utilisateur"
+      />
 
       {/* Edit modal */}
       {editUser && (
-        <EditUserModal user={editUser} open onClose={() => setEditUser(null)} onSubmit={(d) => handleUpdate(editUser.id, d)} />
+        <EditUserModal
+          user={editUser}
+          open
+          onClose={() => setEditUser(null)}
+          onSubmit={(d) => handleUpdate(editUser.id, d)}
+        />
       )}
 
       {/* Delete modal */}
       <Modal open={!!deleteUser} onClose={() => setDeleteUser(null)} title="Confirmer la suppression">
-        <p className="text-sm text-slate-400 mb-5">Supprimer l'utilisateur <strong className="text-white">{deleteUser?.email}</strong> ? Cette action est irréversible.</p>
+        <p className="text-sm text-slate-400 mb-5">
+          Supprimer l'utilisateur <strong className="text-white">{deleteUser?.email}</strong> ? Cette action est irréversible.
+        </p>
         <div className="flex justify-end gap-2">
-          <button className="btn-secondary text-xs px-3 py-1.5 rounded-lg" onClick={() => setDeleteUser(null)}>Annuler</button>
-          <button className="btn-danger text-xs px-3 py-1.5 rounded-lg" onClick={handleDelete}>Supprimer</button>
+          <button className="btn-secondary text-xs px-3 py-1.5 rounded-lg" onClick={() => setDeleteUser(null)}>
+            Annuler
+          </button>
+          <button className="btn-danger text-xs px-3 py-1.5 rounded-lg" onClick={handleDelete}>
+            Supprimer
+          </button>
         </div>
       </Modal>
     </div>
   );
 }
 
-function UserFormModal({ open, onClose, onSubmit, title }: {
-  open: boolean; onClose: () => void; title: string;
-  onSubmit: (data: { email: string; password: string; role: string; firstName?: string; lastName?: string }) => Promise<void>;
+function UserFormModal({
+  open,
+  onClose,
+  onSubmit,
+  title,
+}: {
+  open: boolean;
+  onClose: () => void;
+  title: string;
+  onSubmit: (data: { email: string; password: string; role: UserRole; firstName?: string; lastName?: string }) => Promise<void>;
 }) {
+  const defaultRole = ROLE_OPTIONS[0] ?? ('CONSULTANT' as UserRole);
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<UserRole>('DOCUMENT_MANAGER');
+  const [role, setRole] = useState<UserRole>(defaultRole);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [error, setError] = useState('');
@@ -204,8 +291,19 @@ function UserFormModal({ open, onClose, onSubmit, title }: {
 
     setLoading(true);
     try {
-      await onSubmit({ email, password, role, firstName: firstName || undefined, lastName: lastName || undefined });
-      setEmail(''); setPassword(''); setRole('CONSULTANT'); setFirstName(''); setLastName('');
+      await onSubmit({
+        email,
+        password,
+        role,
+        firstName: firstName || undefined,
+        lastName: lastName || undefined,
+      });
+
+      setEmail('');
+      setPassword('');
+      setRole(defaultRole);
+      setFirstName('');
+      setLastName('');
     } catch (err) {
       setError((err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Erreur');
     } finally {
@@ -217,22 +315,43 @@ function UserFormModal({ open, onClose, onSubmit, title }: {
     <Modal open={open} onClose={onClose} title={title}>
       <div className="space-y-4">
         {error && <p className="alert-error">{error}</p>}
+
         <div className="grid gap-4 sm:grid-cols-2">
-          <div><label className="label">Prénom</label><input className="input" value={firstName} onChange={(e) => setFirstName(e.target.value)} /></div>
-          <div><label className="label">Nom</label><input className="input" value={lastName} onChange={(e) => setLastName(e.target.value)} /></div>
+          <div>
+            <label className="label">Prénom</label>
+            <input className="input" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+          </div>
+          <div>
+            <label className="label">Nom</label>
+            <input className="input" value={lastName} onChange={(e) => setLastName(e.target.value)} />
+          </div>
         </div>
-        <div><label className="label">Email *</label><input type="email" className="input" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
-        <div><label className="label">Mot de passe *</label><input type="password" className="input" value={password} onChange={(e) => setPassword(e.target.value)} /></div>
+
+        <div>
+          <label className="label">Email *</label>
+          <input type="email" className="input" value={email} onChange={(e) => setEmail(e.target.value)} />
+        </div>
+
+        <div>
+          <label className="label">Mot de passe *</label>
+          <input type="password" className="input" value={password} onChange={(e) => setPassword(e.target.value)} />
+        </div>
+
         <div>
           <label className="label">Rôle *</label>
           <select className="select" value={role} onChange={(e) => setRole(e.target.value as UserRole)}>
-            {(['DOCUMENT_MANAGER', 'STANDARD_USER', 'SECURITY_OFFICER'] as UserRole[]).map((r) => (
-              <option key={r} value={r}>{ROLE_LABELS[r]}</option>
+            {ROLE_OPTIONS.map((r) => (
+              <option key={r} value={r}>
+                {ROLE_LABELS[r]}
+              </option>
             ))}
           </select>
         </div>
+
         <div className="flex justify-end gap-2 pt-2">
-          <button className="btn-secondary text-xs px-3 py-1.5 rounded-lg" onClick={onClose}>Annuler</button>
+          <button className="btn-secondary text-xs px-3 py-1.5 rounded-lg" onClick={onClose}>
+            Annuler
+          </button>
           <button className="btn-primary text-xs px-3 py-1.5 rounded-lg" disabled={loading} onClick={handleSubmit}>
             {loading ? 'Création…' : 'Créer'}
           </button>
@@ -242,11 +361,18 @@ function UserFormModal({ open, onClose, onSubmit, title }: {
   );
 }
 
-function EditUserModal({ user, open, onClose, onSubmit }: {
-  user: User; open: boolean; onClose: () => void;
+function EditUserModal({
+  user,
+  open,
+  onClose,
+  onSubmit,
+}: {
+  user: User;
+  open: boolean;
+  onClose: () => void;
   onSubmit: (data: Record<string, unknown>) => Promise<void>;
 }) {
-  const [role, setRole] = useState(user.role);
+  const [role, setRole] = useState<UserRole>(user.role as UserRole);
   const [status, setStatus] = useState<UserStatus>(user.status);
   const [firstName, setFirstName] = useState(user.firstName ?? '');
   const [lastName, setLastName] = useState(user.lastName ?? '');
@@ -257,7 +383,12 @@ function EditUserModal({ user, open, onClose, onSubmit }: {
     setLoading(true);
     setError('');
     try {
-      await onSubmit({ role, status, firstName: firstName || null, lastName: lastName || null });
+      await onSubmit({
+        role,
+        status,
+        firstName: firstName || null,
+        lastName: lastName || null,
+      });
     } catch (err) {
       setError((err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Erreur');
     } finally {
@@ -269,16 +400,29 @@ function EditUserModal({ user, open, onClose, onSubmit }: {
     <Modal open={open} onClose={onClose} title={`Modifier ${user.email}`}>
       <div className="space-y-4">
         {error && <p className="alert-error">{error}</p>}
+
         <div className="grid gap-4 sm:grid-cols-2">
-          <div><label className="label">Prénom</label><input className="input" value={firstName} onChange={(e) => setFirstName(e.target.value)} /></div>
-          <div><label className="label">Nom</label><input className="input" value={lastName} onChange={(e) => setLastName(e.target.value)} /></div>
+          <div>
+            <label className="label">Prénom</label>
+            <input className="input" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+          </div>
+          <div>
+            <label className="label">Nom</label>
+            <input className="input" value={lastName} onChange={(e) => setLastName(e.target.value)} />
+          </div>
         </div>
+
         <div>
           <label className="label">Rôle</label>
           <select className="select" value={role} onChange={(e) => setRole(e.target.value as UserRole)}>
-            {Object.entries(ROLE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+            {ROLE_OPTIONS.map((r) => (
+              <option key={r} value={r}>
+                {ROLE_LABELS[r]}
+              </option>
+            ))}
           </select>
         </div>
+
         <div>
           <label className="label">Statut</label>
           <select className="select" value={status} onChange={(e) => setStatus(e.target.value as UserStatus)}>
@@ -288,8 +432,11 @@ function EditUserModal({ user, open, onClose, onSubmit }: {
             <option value="PENDING">En attente</option>
           </select>
         </div>
+
         <div className="flex justify-end gap-2 pt-2">
-          <button className="btn-secondary text-xs px-3 py-1.5 rounded-lg" onClick={onClose}>Annuler</button>
+          <button className="btn-secondary text-xs px-3 py-1.5 rounded-lg" onClick={onClose}>
+            Annuler
+          </button>
           <button className="btn-primary text-xs px-3 py-1.5 rounded-lg" disabled={loading} onClick={handleSubmit}>
             {loading ? 'Enregistrement…' : 'Enregistrer'}
           </button>

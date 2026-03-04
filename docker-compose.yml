@@ -26,7 +26,7 @@ services:
       - ./database/seeds/seed_admin.sql:/docker-entrypoint-initdb.d/03-seed-admin.sql:ro
       - ./database/seeds/seed_categories.sql:/docker-entrypoint-initdb.d/04-seed-categories.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ged_user} -d ${POSTGRES_DB:-ged_db}"]
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ged_user} -d ${POSTGRES_DB:-ged_db}" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -54,7 +54,7 @@ services:
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-ged_local_redis_2024}", "ping"]
+      test: [ "CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-ged_local_redis_2024}", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -115,10 +115,10 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-      target: builder   # builder stage has all devDependencies (ts-node-dev)
+      target: builder # builder stage has all devDependencies (ts-node-dev)
     container_name: ged-backend
     restart: unless-stopped
-    command: ["npx", "ts-node-dev", "--respawn", "--transpile-only", "src/server.ts"]
+    command: [ "npx", "ts-node-dev", "--respawn", "--transpile-only", "src/server.ts" ]
     environment:
       NODE_ENV: development
       PORT: ${PORT:-5000}
@@ -155,7 +155,7 @@ services:
       - ./backend/package.json:/app/package.json:ro
       - ./backend/tsconfig.json:/app/tsconfig.json:ro
     healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:${PORT:-5000}/health || exit 1"]
+      test: [ "CMD-SHELL", "wget -q --spider http://localhost:${PORT:-5000}/health || exit 1" ]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -200,7 +200,7 @@ services:
     volumes:
       - ai_model_cache:/app/model_cache
     healthcheck:
-      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\" || exit 1"]
+      test: [ "CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\" || exit 1" ]
       interval: 20s
       timeout: 10s
       retries: 5
@@ -222,7 +222,8 @@ services:
     container_name: ged-frontend
     restart: unless-stopped
     environment:
-      VITE_API_URL: http://localhost:${PORT:-5000}/api/v1
+      VITE_API_URL: /api/v1
+      VITE_BACKEND_URL: http://backend:${PORT:-5000}
       VITE_APP_TITLE: "GED — Ministère de l'Éducation Nationale"
     ports:
       - "3000:3000"

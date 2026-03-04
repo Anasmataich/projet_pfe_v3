@@ -67,9 +67,7 @@ export function LoginForm({ onSubmit, isLoading }: Props) {
       </div>
 
       {/* Error */}
-      {error && (
-        <p className="alert-error text-xs">{error}</p>
-      )}
+      {error && <p className="alert-error text-xs">{error}</p>}
 
       {/* Submit */}
       <button
@@ -85,7 +83,9 @@ export function LoginForm({ onSubmit, isLoading }: Props) {
             </svg>
             Connexion…
           </span>
-        ) : 'Se connecter'}
+        ) : (
+          'Se connecter'
+        )}
       </button>
 
       <div className="flex justify-end mt-2">
